@@ -1,0 +1,220 @@
+diff --git a/target/linux/ath79/image/generic-tp-link.mk b/target/linux/ath79/image/generic-tp-link.mk
+index 7979dda786..d30441ef08 100644
+--- a/target/linux/ath79/image/generic-tp-link.mk
++++ b/target/linux/ath79/image/generic-tp-link.mk
+@@ -572,6 +572,17 @@ define Device/tplink_tl-wpa8630p-v2.1-eu
+ endef
+ TARGET_DEVICES += tplink_tl-wpa8630p-v2.1-eu
+ 
++define Device/tplink_tl-wdr8500-v2
++  $(Device/tplink-8mlzma)
++  SOC := qca9563
++  DEVICE_MODEL :=  TL-WDR8500
++  DEVICE_VARIANT := v2
++  DEVICE_PACKAGES := kmod-ath10k-ct ath10k-firmware-qca9984-ct-htt
++  TPLINK_HWID := 0x85000002
++  SUPPORTED_DEVICES += tl-wdr8500-v2
++endef
++TARGET_DEVICES += tplink_tl-wdr8500-v2
++
+ define Device/tplink_tl-wr1043nd-v1
+   $(Device/tplink-8m)
+   SOC := ar9132
+diff --git a/target/linux/ath79/generic/base-files/etc/hotplug.d/firmware/11-ath10k-caldata b/target/linux/ath79/generic/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
+index 857f566db8..dff10d01ae 100644
+--- a/target/linux/ath79/generic/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
++++ b/target/linux/ath79/generic/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
+@@ -209,6 +215,13 @@ case "$FIRMWARE" in
+ 		caldata_extract "art" 0x5000 0x2f20
+ 		ath10k_patch_mac $(macaddr_add $(mtd_get_mac_binary info 0x8) +1)
+ 		;;
++	tplink,tl-wdr8500-v2)
++		caldata_extract "art" 0x1000 0x2f20
++		ath10k_patch_mac $(macaddr_add $(mtd_get_mac_binary factory_info 0xd) -1)
++		ln -sf /lib/firmware/ath10k/pre-cal-pci-0000\:00\:00.0.bin \
++			/lib/firmware/ath10k/QCA9984/hw1.0/board.bin
++		rm /lib/firmware/ath10k/QCA9984/hw1.0/board-2.bin
++		;;
+ 	yuncore,a782|\
+ 	yuncore,xd4200)
+ 		caldata_extract "art" 0x5000 0x2f20
+diff --git a/target/linux/ath79/generic/base-files/etc/board.d/02_network b/target/linux/ath79/generic/base-files/etc/board.d/02_network
+index 060c0c9e42..2866a2fefa 100755
+--- a/target/linux/ath79/generic/base-files/etc/board.d/02_network
++++ b/target/linux/ath79/generic/base-files/etc/board.d/02_network
+@@ -331,6 +331,10 @@ ath79_setup_interfaces()
+ 		ucidef_add_switch "switch0" \
+ 			"0@eth0" "1:lan:1" "2:lan:3" "3:lan:2"
+ 		;;
++	tplink,tl-wdr8500-v2)
++		ucidef_add_switch "switch0" \
++			"1:lan" "2:lan" "3:lan" "4:lan" "0:wan" "6@eth0"
++		;;
+ 	tplink,tl-wpa8630-v1|\
+ 	tplink,tl-wpa8630p-v2-int|\
+ 	tplink,tl-wpa8630p-v2.0-eu|\
+diff --git a/target/linux/ath79/dts/qca9563_tplink_tl-wdr8500-v2.dts b/target/linux/ath79/dts/qca9563_tplink_tl-wdr8500-v2.dts
+new file mode 100644
+index 0000000000..87bd1b0638
+--- /dev/null
++++ b/target/linux/ath79/dts/qca9563_tplink_tl-wdr8500-v2.dts
+@@ -0,0 +1,159 @@
++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
++/dts-v1/;
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++
++#include "qca956x.dtsi"
++
++/ {
++	compatible = "tplink,tl-wdr8500-v2", "qca,qca9563";
++	model = "TP-Link TL-WDR8500 V2";
++
++	chosen {
++		bootargs = "console=ttyS0,115200n8";
++	};
++
++	aliases {
++		led-boot = &led_system;
++		led-failsafe = &led_system;
++		led-running = &led_system;
++		led-upgrade = &led_system;
++		mdio-gpio0 = &mdio2;
++	};
++
++	leds: leds {
++		compatible = "gpio-leds";
++
++		led_system: system {
++			label = "tp-link:blue:system";
++			gpios = <&gpio 21 GPIO_ACTIVE_LOW>;
++			default-state = "on";
++		};
++
++		led_wlan: wlan {
++			label = "tp-link:green:wlan";
++			gpios = <&gpio 5 GPIO_ACTIVE_LOW>;
++			linux,default-trigger = "phy0tpt";
++		};
++	};
++
++	keys: keys {
++		compatible = "gpio-keys";
++
++		reset {
++			label = "Reset button";
++			linux,code = <KEY_RESTART>;
++			gpios = <&gpio 1 GPIO_ACTIVE_LOW>;
++			debounce-interval = <60>;
++		};
++
++		wifi {
++			label = "RFKILL button";
++			linux,code = <KEY_RFKILL>;
++			gpios = <&gpio 2 GPIO_ACTIVE_LOW>;
++			debounce-interval = <60>;
++		};
++	};
++
++	rtl8367b {
++			compatible = "realtek,rtl8367s";
++			realtek,extif1 = <1 1 9 1 1 1 1 1 2>;
++			mii-bus = <&mdio0>;
++			cpu-port = <6>;
++	};
++
++	mdio2: mdio {
++		compatible = "virtual,mdio-gpio";
++
++		gpios = <&gpio 8 GPIO_ACTIVE_HIGH>, /* MDC */
++			<&gpio 10 GPIO_ACTIVE_HIGH>; /* MDIO */
++		#address-cells = <1>;
++		#size-cells = <0>;
++	};
++};
++
++&pcie {
++	status = "okay";
++};
++
++&uart {
++	status = "okay";
++};
++
++&gpio {
++	status = "okay";
++};
++
++&spi {
++	status = "okay";
++
++	num-cs = <1>;
++
++	flash@0 {
++		compatible = "jedec,spi-nor";
++		reg = <0>;
++		spi-max-frequency = <25000000>;
++
++		mtdparts: partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++		};
++	};
++};
++
++&mtdparts {
++	factory_boot: partition@0 {
++		label = "factory_boot";
++		reg = <0x000000 0x01b800>;
++		read-only;
++	};
++
++	factory_info: partition@1b800 {
++		label = "factory_info";
++		reg = <0x01b800 0x000800>;
++		read-only;
++	};
++	
++	art: partition@1c000 {
++		label = "art";
++		reg = <0x01c000 0x004000>;
++		read-only;
++	};
++
++	partition@20000 {
++		label = "firmware";
++		compatible = "tplink,firmware";
++		reg = <0x020000 0x7e0000>;
++	};
++};
++
++&mdio0 {
++	status = "okay";
++	phy-mask = <0x0>;
++	phy29: ethernet-phy@1d {
++			reg = <0x1d>;
++			phy-mode = "sgmii";
++			device_type = "ethernet-phy";
++
++	};
++};
++
++&eth0 {
++	status = "okay";
++	phy-mode = "sgmii";
++	mtd-mac-address = <&factory_info 0xd>;
++	pll-data = <0x03000101 0x00000101 0x00001919>;
++	fixed-link {
++		speed = <1000>;
++		full-duplex;
++	};
++};
++
++&wmac {
++	status = "okay";
++
++	mtd-cal-data = <&art 0x0>;
++	mtd-mac-address = <&factory_info 0xd>;
++};
