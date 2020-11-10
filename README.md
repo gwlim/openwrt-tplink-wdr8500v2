@@ -8,7 +8,6 @@ This repository contains patches and binaries for adding OpenWrt support on TP-L
 Original uboot needs to be replaced due to RSA Protection
 
   - Overwrite the first 102K of the SPI flash with the breed bootloader included in this repository
-  - Access the Breed web interface and correct the mac address
   - git clone official openwrt repository
   - copy all the patches into the openwrt repository
   - apply the patches and do make menuconfig
