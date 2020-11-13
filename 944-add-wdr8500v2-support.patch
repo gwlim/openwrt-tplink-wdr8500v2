@@ -24,7 +24,7 @@ diff --git a/target/linux/ath79/generic/base-files/etc/hotplug.d/firmware/11-ath
 index 857f566db8..dff10d01ae 100644
 --- a/target/linux/ath79/generic/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
 +++ b/target/linux/ath79/generic/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
-@@ -209,6 +215,13 @@ case "$FIRMWARE" in
+@@ -211,6 +217,12 @@ case "$FIRMWARE" in
  		caldata_extract "art" 0x5000 0x2f20
  		ath10k_patch_mac $(macaddr_add $(mtd_get_mac_binary info 0x8) +1)
  		;;
@@ -33,7 +33,6 @@ index 857f566db8..dff10d01ae 100644
 +		ath10k_patch_mac $(macaddr_add $(mtd_get_mac_binary factory_info 0xd) -1)
 +		ln -sf /lib/firmware/ath10k/pre-cal-pci-0000\:00\:00.0.bin \
 +			/lib/firmware/ath10k/QCA9984/hw1.0/board.bin
-+		rm /lib/firmware/ath10k/QCA9984/hw1.0/board-2.bin
 +		;;
  	yuncore,a782|\
  	yuncore,xd4200)
@@ -58,7 +57,7 @@ new file mode 100644
 index 0000000000..87bd1b0638
 --- /dev/null
 +++ b/target/linux/ath79/dts/qca9563_tplink_tl-wdr8500-v2.dts
-@@ -0,0 +1,159 @@
+@@ -0,0 +1,143 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
 +/dts-v1/;
 +
@@ -80,7 +79,6 @@ index 0000000000..87bd1b0638
 +		led-failsafe = &led_system;
 +		led-running = &led_system;
 +		led-upgrade = &led_system;
-+		mdio-gpio0 = &mdio2;
 +	};
 +
 +	leds: leds {
@@ -124,14 +122,6 @@ index 0000000000..87bd1b0638
 +			cpu-port = <6>;
 +	};
 +
-+	mdio2: mdio {
-+		compatible = "virtual,mdio-gpio";
-+
-+		gpios = <&gpio 8 GPIO_ACTIVE_HIGH>, /* MDC */
-+			<&gpio 10 GPIO_ACTIVE_HIGH>; /* MDIO */
-+		#address-cells = <1>;
-+		#size-cells = <0>;
-+	};
 +};
 +
 +&pcie {
@@ -192,13 +182,6 @@ index 0000000000..87bd1b0638
 +
 +&mdio0 {
 +	status = "okay";
-+	phy-mask = <0x0>;
-+	phy29: ethernet-phy@1d {
-+			reg = <0x1d>;
-+			phy-mode = "sgmii";
-+			device_type = "ethernet-phy";
-+
-+	};
 +};
 +
 +&eth0 {
